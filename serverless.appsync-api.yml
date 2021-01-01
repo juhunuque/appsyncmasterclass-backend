@@ -14,6 +14,9 @@ mappingTemplates:
 #  input and the output. We are not using since we use the convention in the folder mapping-templates
 #    request:
 #    response:
+  - type: Mutation
+    field: editMyProfile
+    dataSource: usersTable
 
 dataSources:
   - type: NONE

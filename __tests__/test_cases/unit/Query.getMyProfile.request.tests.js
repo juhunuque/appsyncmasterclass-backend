@@ -3,7 +3,7 @@ const when = require('../../steps/when')
 const chance = require('chance').Chance()
 const path = require('path')
 
-describe('Query.getMyProfile.request tempate', () => {
+describe('Query.getMyProfile.request template', () => {
   it('Should use username as id', async () => {
     const templatePath = path.resolve(__dirname, '../../../mapping-templates/Query.getMyProfile.request.vtl')
     const username = chance.guid()
