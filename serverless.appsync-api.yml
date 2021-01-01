@@ -5,3 +5,20 @@ userPoolConfig:
   awsRegion: us-east-1
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
+mappingTemplatesLocation: mapping-templates
+mappingTemplates:
+  - type: Query
+    field: getMyProfile
+    dataSource: usersTable
+#  The following request and response fields maps the
+#  input and the output. We are not using since we use the convention in the folder mapping-templates
+#    request:
+#    response:
+
+dataSources:
+  - type: NONE
+    name: none
+  - type: AMAZON_DYNAMODB
+    name: usersTable
+    config:
+      tableName: !Ref UsersTable
