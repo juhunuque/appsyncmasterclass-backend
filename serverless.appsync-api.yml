@@ -2,7 +2,7 @@ name: appsyncmasterclass
 schema: schema.api.graphql
 authenticationType: AMAZON_COGNITO_USER_POOLS
 userPoolConfig:
-  awsRegion: us-east-1
+  awsRegion: eu-west-1
   defaultAction: ALLOW
   userPoolId: !Ref CognitoUserPool
 mappingTemplatesLocation: mapping-templates
@@ -10,24 +10,21 @@ mappingTemplates:
   - type: Query
     field: getMyProfile
     dataSource: usersTable
-#  The following request and response fields maps the
-#  input and the output. We are not using since we use the convention in the folder mapping-templates
-#    request:
-#    response:
   - type: Query
     field: getImageUploadUrl
     dataSource: getImageUploadUrlFunction
     request: false
     response: false
-
   - type: Query
     field: getTweets
     dataSource: tweetsTable
+  - type: Query
+    field: getMyTimeline
+    dataSource: timelinesTable
 
   - type: Mutation
     field: editMyProfile
     dataSource: usersTable
-
   - type: Mutation
     field: tweet
     dataSource: tweetFunction
@@ -38,6 +35,9 @@ mappingTemplates:
   - type: Tweet
     field: profile
     dataSource: usersTable
+  - type: TimelinePage
+    field: tweets
+    dataSource: tweetsTable
 
 dataSources:
   - type: NONE
@@ -50,6 +50,10 @@ dataSources:
     name: tweetsTable
     config:
       tableName: !Ref TweetsTable
+  - type: AMAZON_DYNAMODB
+    name: timelinesTable
+    config:
+      tableName: !Ref TimelinesTable
   - type: AWS_LAMBDA
     name: getImageUploadUrlFunction
     config:
@@ -59,3 +63,5 @@ dataSources:
     config:
       functionName: tweet
 
+substitutions:
+  TweetsTable: !Ref TweetsTable
