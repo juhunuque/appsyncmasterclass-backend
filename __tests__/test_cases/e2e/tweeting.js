@@ -23,7 +23,7 @@ describe('Given an authenticated user', () => {
         replies: 0,
         likes: 0,
         retweets: 0,
-        liked: false
+        liked: false,
       })
     })
 
@@ -69,6 +69,28 @@ describe('Given an authenticated user', () => {
           .rejects
           .toMatchObject({
             message: expect.stringContaining('max limit is 25')
+          })
+      })
+    })
+
+    describe('When he likes the tweet', () => {
+      beforeAll(async () => {
+        await when.a_user_calls_like(user, tweet.id)
+      })
+
+      it('Should see Tweet.liked as true', async () => {
+        const { tweets } = await when.a_user_calls_getMyTimeline(user, 25)
+
+        expect(tweets).toHaveLength(1)
+        expect(tweets[0].id).toEqual(tweet.id)
+        expect(tweets[0].liked).toEqual(true)
+      })
+
+      it('Should not be able to like the same tweet a second time', async () => {
+        await expect(() => when.a_user_calls_like(user, tweet.id))
+          .rejects
+          .toMatchObject({
+            message: expect.stringContaining('DynamoDB transaction error')
           })
       })
     })
