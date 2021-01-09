@@ -3,7 +3,86 @@ const AWS = require('aws-sdk')
 const fs = require('fs')
 const velocityMapper = require('amplify-appsync-simulator/lib/velocity/value-mapper/mapper')
 const velocityTemplate = require('amplify-velocity-template')
-const GraphQL = require('../lib/graphql')
+const { GraphQL, registerFragment } = require('../lib/graphql')
+
+const myProfileFragment = `
+fragment myProfileFields on MyProfile {
+  id
+  name
+  screenName
+  imageUrl
+  backgroundImageUrl
+  bio
+  location
+  website
+  birthdate
+  createdAt
+  followersCount
+  followingCount
+  tweetsCount
+  likesCounts
+}
+`
+
+const otherProfileFragment = `
+fragment otherProfileFields on OtherProfile {
+  id
+  name
+  screenName
+  imageUrl
+  backgroundImageUrl
+  bio
+  location
+  website
+  birthdate
+  createdAt
+  followersCount
+  followingCount
+  tweetsCount
+  likesCounts
+}
+`
+
+const iProfileFragment = `
+fragment iProfileFields on IProfile {
+  ... on MyProfile {
+    ... myProfileFields
+  }
+
+  ... on OtherProfile {
+    ... otherProfileFields
+  }
+}
+`
+
+const tweetFragment = `
+fragment tweetFields on Tweet {
+  id
+  profile {
+    ... iProfileFields
+  }
+  createdAt
+  text
+  replies
+  likes
+  retweets
+  liked
+}
+`
+
+const iTweetFragment = `
+fragment iTweetFields on ITweet {
+  ... on Tweet {
+    ... tweetFields
+  }
+}
+`
+
+registerFragment('myProfileFields', myProfileFragment)
+registerFragment('otherProfileFields', otherProfileFragment)
+registerFragment('iProfileFields', iProfileFragment)
+registerFragment('tweetFields', tweetFragment)
+registerFragment('iTweetFields', iTweetFragment)
 
 const we_invoke_confirmUserSignup = async (username, name, email) => {
   const handler = require('../../functions/confirm-user-signup').handler
@@ -28,7 +107,7 @@ const we_invoke_confirmUserSignup = async (username, name, email) => {
     "response": {}
   }
 
-  return await handler(event, context)
+  await handler(event, context)
 }
 
 const we_invoke_getImageUploadUrl = async (username, extension, contentType) => {
@@ -48,6 +127,22 @@ const we_invoke_getImageUploadUrl = async (username, extension, contentType) => 
   return await handler(event, context)
 }
 
+const we_invoke_tweet = async (username, text) => {
+  const handler = require('../../functions/tweet').handler
+
+  const context = {}
+  const event = {
+    identity: {
+      username
+    },
+    arguments: {
+      text
+    }
+  }
+
+  return await handler(event, context)
+}
+
 const a_user_signs_up = async (password, name, email) => {
   const cognito = new AWS.CognitoIdentityServiceProvider()
 
@@ -59,9 +154,7 @@ const a_user_signs_up = async (password, name, email) => {
     Username: email,
     Password: password,
     UserAttributes: [
-      {
-        Name: 'name', Value: name
-      }
+      { Name: 'name', Value: name }
     ]
   }).promise()
 
@@ -83,33 +176,19 @@ const a_user_signs_up = async (password, name, email) => {
 }
 
 const we_invoke_an_appsync_template = (templatePath, context) => {
-  const template = fs.readFileSync(templatePath, {encoding: 'utf-8'})
+  const template = fs.readFileSync(templatePath, { encoding: 'utf-8' })
   const ast = velocityTemplate.parse(template)
   const compiler = new velocityTemplate.Compile(ast, {
     valueMapper: velocityMapper.map,
     escape: false
   })
-
   return JSON.parse(compiler.render(context))
 }
 
 const a_user_calls_getMyProfile = async (user) => {
   const getMyProfile = `query getMyProfile {
     getMyProfile {
-      backgroundImageUrl
-      bio
-      birthdate
-      createdAt
-      followersCount
-      followingCount
-      id
-      imageUrl
-      likesCounts
-      location
-      name
-      screenName
-      tweetsCount
-      website
+      ... myProfileFields
     }
   }`
 
@@ -117,29 +196,16 @@ const a_user_calls_getMyProfile = async (user) => {
   const profile = data.getMyProfile
 
   console.log(`[${user.username}] - fetched profile`)
+
   return profile
 }
 
 const a_user_calls_editMyProfile = async (user, input) => {
   const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
     editMyProfile(newProfile: $input) {
-      backgroundImageUrl
-      bio
-      birthdate
-      createdAt
-      followersCount
-      followingCount
-      id
-      imageUrl
-      likesCounts
-      location
-      name
-      screenName
-      tweetsCount
-      website
+      ... myProfileFields
     }
   }`
-
   const variables = {
     input
   }
@@ -148,8 +214,8 @@ const a_user_calls_editMyProfile = async (user, input) => {
   const profile = data.editMyProfile
 
   console.log(`[${user.username}] - edited profile`)
-  return profile
 
+  return profile
 }
 
 const a_user_calls_getImageUploadUrl = async (user, extension, contentType) => {
@@ -174,9 +240,7 @@ const a_user_calls_tweet = async (user, text) => {
     tweet(text: $text) {
       id
       profile {
-        id
-        name
-        screenName
+        ... iProfileFields
       }
       createdAt
       text
@@ -203,22 +267,7 @@ const a_user_calls_getTweets = async (user, userId, limit, nextToken) => {
     getTweets(userId: $userId, limit: $limit, nextToken: $nextToken) {
       nextToken
       tweets {
-        id
-        createdAt
-        profile {
-          id
-          name
-          screenName
-        }
-        ... on Tweet {
-          id
-          createdAt
-          text
-          replies
-          likes
-          retweets
-          liked
-        }
+        ... iTweetFields
       }
     }
   }`
@@ -229,27 +278,11 @@ const a_user_calls_getTweets = async (user, userId, limit, nextToken) => {
   }
 
   const data = await GraphQL(process.env.API_URL, getTweets, variables, user.accessToken)
-  const newTweet = data.getTweets
+  const result = data.getTweets
 
   console.log(`[${user.username}] - posted new tweet`)
 
-  return newTweet
-}
-
-const we_invoke_tweet = async (username, text) => {
-  const handler = require('../../functions/tweet').handler
-
-  const context = {}
-  const event = {
-    identity: {
-      username
-    },
-    arguments: {
-      text
-    }
-  }
-
-  return await handler(event, context)
+  return result
 }
 
 const a_user_calls_getMyTimeline = async (user, limit, nextToken) => {
@@ -257,20 +290,7 @@ const a_user_calls_getMyTimeline = async (user, limit, nextToken) => {
     getMyTimeline(limit: $limit, nextToken: $nextToken) {
       nextToken
       tweets {
-        id
-        createdAt
-        profile {
-          id
-          name
-          screenName
-        }
-        ... on Tweet {          
-          text
-          replies
-          likes
-          retweets
-          liked
-        }
+        ... iTweetFields
       }
     }
   }`
@@ -289,13 +309,13 @@ const a_user_calls_getMyTimeline = async (user, limit, nextToken) => {
 
 module.exports = {
   we_invoke_confirmUserSignup,
+  we_invoke_getImageUploadUrl,
+  we_invoke_tweet,
   a_user_signs_up,
   we_invoke_an_appsync_template,
   a_user_calls_getMyProfile,
   a_user_calls_editMyProfile,
-  we_invoke_getImageUploadUrl,
   a_user_calls_getImageUploadUrl,
-  we_invoke_tweet,
   a_user_calls_tweet,
   a_user_calls_getTweets,
   a_user_calls_getMyTimeline
