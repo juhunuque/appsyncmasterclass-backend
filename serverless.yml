@@ -7,6 +7,14 @@ plugins:
   - serverless-export-env
   - serverless-manifest-plugin
 
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  environment:
+    STAGE: ${self:custom.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+
 package:
   exclude:
     - package-lock.json
@@ -17,19 +25,12 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   appSync:
     - ${file(serverless.appsync-api.yml)}
+
   manifest:
     postProcess: ./processManifest.js
     disablePostDeployGeneration: true
     disableOutput: true
     silent: true
-
-provider:
-  name: aws
-  runtime: nodejs12.x
-  region: us-east-1
-  environment:
-    STAGE: ${self:custom.stage}
-    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
 functions:
   confirmUserSignup:
@@ -73,8 +74,8 @@ functions:
     environment:
       USERS_TABLE: !Ref UsersTable
       TWEETS_TABLE: !Ref TweetsTable
-      RETWEETS_TABLE: !Ref RetweetsTable
       TIMELINES_TABLE: !Ref TimelinesTable
+      RETWEETS_TABLE: !Ref RetweetsTable
     iamRoleStatements:
       - Effect: Allow
         Action: dynamodb:GetItem
@@ -121,12 +122,22 @@ resources:
             AttributeType: S
           - AttributeName: creator
             AttributeType: S
+          - AttributeName: retweetOf
+            AttributeType: S
         GlobalSecondaryIndexes:
           - IndexName: byCreator
             KeySchema:
               - AttributeName: creator
                 KeyType: HASH
               - AttributeName: id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: retweetsByCreator
+            KeySchema:
+              - AttributeName: creator
+                KeyType: HASH
+              - AttributeName: retweetOf
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
@@ -196,7 +207,6 @@ resources:
           - Key: Name
             Value: retweets-table
 
-
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -253,12 +263,12 @@ resources:
               AllowedHeaders:
                 - '*'
 
-
   Outputs:
     AwsRegion:
       Value: ${self:custom.region}
+
     CognitoUserPoolId:
       Value: !Ref CognitoUserPool
+
     WebCognitoUserPoolClientId:
       Value: !Ref WebUserPoolClient
-
