@@ -1,7 +1,7 @@
 require('dotenv').config()
 const given = require('../../steps/given')
-const when = require('../../steps/when')
 const then = require('../../steps/then')
+const when = require('../../steps/when')
 const chance = require('chance').Chance()
 const path = require('path')
 
@@ -28,7 +28,11 @@ describe('Given an authenticated user', () => {
       followersCount: 0,
       followingCount: 0,
       tweetsCount: 0,
-      likesCounts: 0
+      likesCounts: 0,
+      tweets: {
+        nextToken: null,
+        tweets: []
+      }
     })
 
     const [firstName, lastName] = profile.name.split(' ')
@@ -36,7 +40,7 @@ describe('Given an authenticated user', () => {
     expect(profile.screenName).toContain(lastName)
   })
 
-  it('The user can get an URL to upload a new profile image', async () => {
+  it('The user can get an URL to upload new profile image', async () => {
     const uploadUrl = await when.a_user_calls_getImageUploadUrl(user, '.png', 'image/png')
 
     const bucketName = process.env.BUCKET_NAME
@@ -61,9 +65,5 @@ describe('Given an authenticated user', () => {
       ...profile,
       name: newName
     })
-
-    const [firstName, lastName] = profile.name.split(' ')
-    expect(profile.screenName).toContain(firstName)
-    expect(profile.screenName).toContain(lastName)
   })
 })

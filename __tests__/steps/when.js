@@ -20,7 +20,7 @@ fragment myProfileFields on MyProfile {
   followersCount
   followingCount
   tweetsCount
-  likesCounts
+  likesCounts  
 }
 `
 
@@ -189,6 +189,13 @@ const a_user_calls_getMyProfile = async (user) => {
   const getMyProfile = `query getMyProfile {
     getMyProfile {
       ... myProfileFields
+
+      tweets {
+        nextToken
+        tweets {
+          ... iTweetFields
+        }
+      }
     }
   }`
 
@@ -204,6 +211,13 @@ const a_user_calls_editMyProfile = async (user, input) => {
   const editMyProfile = `mutation editMyProfile($input: ProfileInput!) {
     editMyProfile(newProfile: $input) {
       ... myProfileFields
+
+      tweets {
+        nextToken
+        tweets {
+          ... iTweetFields
+        }
+      }
     }
   }`
   const variables = {
@@ -238,16 +252,7 @@ const a_user_calls_getImageUploadUrl = async (user, extension, contentType) => {
 const a_user_calls_tweet = async (user, text) => {
   const tweet = `mutation tweet($text: String!) {
     tweet(text: $text) {
-      id
-      profile {
-        ... iProfileFields
-      }
-      createdAt
-      text
-      replies
-      likes
-      retweets
-      liked
+      ... tweetFields
     }
   }`
   const variables = {
@@ -339,6 +344,29 @@ const a_user_calls_unlike = async (user, tweetId) => {
   return result
 }
 
+const a_user_calls_getLikes = async (user, userId, limit, nextToken) => {
+  const getLikes = `query getLikes($userId: ID!, $limit: Int!, $nextToken: String) {
+    getLikes(userId: $userId, limit: $limit, nextToken: $nextToken) {
+      nextToken
+      tweets {
+        ... iTweetFields
+      }
+    }
+  }`
+  const variables = {
+    userId,
+    limit,
+    nextToken
+  }
+
+  const data = await GraphQL(process.env.API_URL, getLikes, variables, user.accessToken)
+  const result = data.getLikes
+
+  console.log(`[${user.username}] - fetched likes`)
+
+  return result
+}
+
 module.exports = {
   we_invoke_confirmUserSignup,
   we_invoke_getImageUploadUrl,
@@ -352,5 +380,6 @@ module.exports = {
   a_user_calls_getTweets,
   a_user_calls_getMyTimeline,
   a_user_calls_like,
-  a_user_calls_unlike
+  a_user_calls_unlike,
+  a_user_calls_getLikes
 }
