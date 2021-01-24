@@ -35,7 +35,7 @@ mappingTemplates:
     response: false
   - type: Mutation
     field: like
-    dataSource: likesMutation
+    dataSource: likeMutation
   - type: Mutation
     field: unlike
     dataSource: unlikeMutation
@@ -54,6 +54,9 @@ mappingTemplates:
     dataSource: replyFunction
     request: false
     response: false
+  - type: Mutation
+    field: follow
+    dataSource: followMutation
 
   # NESTED FIELDS
   - type: Tweet
@@ -64,22 +67,43 @@ mappingTemplates:
     dataSource: usersTable
     request: Tweet.profile.request.vtl
     response: Tweet.profile.response.vtl
+  - type: Reply
+    field: profile
+    dataSource: usersTable
+    request: Tweet.profile.request.vtl
+    response: Tweet.profile.response.vtl
   - type: Tweet
     field: liked
     dataSource: likesTable
+  - type: Reply
+    field: liked
+    dataSource: likesTable
+    request: Tweet.liked.request.vtl
+    response: Tweet.liked.response.vtl
   - type: Tweet
     field: retweeted
     dataSource: retweetsTable
+  - type: Reply
+    field: retweeted
+    dataSource: retweetsTable
+    request: Tweet.retweeted.request.vtl
+    response: Tweet.retweeted.response.vtl
   - type: Retweet
     field: retweetOf
     dataSource: tweetsTable
+  - type: Reply
+    field: inReplyToTweet
+    dataSource: tweetsTable
+  - type: Reply
+    field: inReplyToUsers
+    dataSource: usersTable
   - type: UnhydratedTweetsPage
     field: tweets
     dataSource: tweetsTable
   - type: MyProfile
     field: tweets
     dataSource: tweetsTable
-  - type: MyProfile
+  - type: OtherProfile
     field: tweets
     dataSource: tweetsTable
     request: MyProfile.tweets.request.vtl
@@ -109,7 +133,11 @@ dataSources:
     config:
       tableName: !Ref RetweetsTable
   - type: AMAZON_DYNAMODB
-    name: likesMutation
+    name: relationshipsTable
+    config:
+      tableName: !Ref RelationshipsTable
+  - type: AMAZON_DYNAMODB
+    name: likeMutation
     config:
       tableName: !Ref LikesTable
       iamRoleStatements:
@@ -134,7 +162,17 @@ dataSources:
           Resource:
             - !GetAtt UsersTable.Arn
             - !GetAtt TweetsTable.Arn
-
+  - type: AMAZON_DYNAMODB
+    name: followMutation
+    config:
+      tableName: !Ref RelationshipsTable
+      iamRoleStatements:
+        - Effect: Allow
+          Action: dynamodb:PutItem
+          Resource: !GetAtt RelationshipsTable.Arn
+        - Effect: Allow
+          Action: dynamodb:UpdateItem
+          Resource: !GetAtt UsersTable.Arn
   - type: AWS_LAMBDA
     name: getImageUploadUrlFunction
     config:
@@ -160,3 +198,4 @@ substitutions:
   TweetsTable: !Ref TweetsTable
   LikesTable: !Ref LikesTable
   UsersTable: !Ref UsersTable
+  RelationshipsTable: !Ref RelationshipsTable
