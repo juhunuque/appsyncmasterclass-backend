@@ -11,6 +11,9 @@ mappingTemplates:
     field: getMyProfile
     dataSource: usersTable
   - type: Query
+    field: getProfile
+    dataSource: usersTable
+  - type: Query
     field: getImageUploadUrl
     dataSource: getImageUploadUrlFunction
     request: false
@@ -108,6 +111,12 @@ mappingTemplates:
     dataSource: tweetsTable
     request: MyProfile.tweets.request.vtl
     response: MyProfile.tweets.response.vtl
+  - type: OtherProfile
+    field: following
+    dataSource: relationshipsTable
+  - type: OtherProfile
+    field: followedBy
+    dataSource: relationshipsTable
 
 dataSources:
   - type: NONE
